@@ -8,6 +8,14 @@ interface StatisticsPageProps {
   dataId: string | null
 }
 
+interface MetricItem {
+  label: string
+  value: number | string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+  trend: string
+}
+
 const StatisticsPage: React.FC<StatisticsPageProps> = ({ dataId }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['statistics', dataId],
@@ -76,11 +84,11 @@ const StatisticsPage: React.FC<StatisticsPageProps> = ({ dataId }) => {
   }
 
   // Extract summary statistics
-  const summary = data.summary || {}
-  const chartData = data.distribution || []
+  const summary = data.summary as Record<string, number> || {}
+  const chartData = (data.distribution as Array<Record<string, any>>) || []
 
   // Key metrics display
-  const metrics = [
+  const metrics: MetricItem[] = [
     { label: 'Mean', value: summary.mean, icon: Target, color: 'from-blue-500 to-cyan-600', trend: '+5.2%' },
     { label: 'Std Dev', value: summary.std, icon: Zap, color: 'from-purple-500 to-pink-600', trend: '-2.1%' },
     { label: 'Median', value: summary.median, icon: Award, color: 'from-green-500 to-emerald-600', trend: '+3.8%' },
@@ -151,7 +159,7 @@ const StatisticsPage: React.FC<StatisticsPageProps> = ({ dataId }) => {
                   borderRadius: '8px',
                   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
                 }}
-                formatter={(value) => `${(value as number).toFixed(2)}`}
+                formatter={(value: any) => `${(value as number).toFixed(2)}`}
               />
               <Bar dataKey="value" fill="url(#colorGradient1)" radius={[8, 8, 0, 0]} />
             </BarChart>
