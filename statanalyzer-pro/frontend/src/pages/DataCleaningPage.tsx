@@ -7,9 +7,10 @@ interface DataCleaningPageProps {
   dataId: string | null
   setDataId: (id: string) => void
   setDataInfo: (info: Record<string, any>) => void
+   dataInfo?: any
 }
 
-const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, setDataInfo }) => {
+const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, setDataIn, dataInfofo }) => {
   const [selectedStrategy, setSelectedStrategy] = useState<string>('fill_mean')
   const [selectedOutlier, setSelectedOutlier] = useState<string>('iqr')
   const [selectedScaling, setSelectedScaling] = useState<string>('standardize')
