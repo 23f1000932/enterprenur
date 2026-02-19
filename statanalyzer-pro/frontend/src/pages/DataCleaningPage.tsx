@@ -6,7 +6,7 @@ import { api } from '../api/client'
 interface DataCleaningPageProps {
   dataId: string | null
   setDataId: (id: string) => void
-  setdataInfo: (info: Record<string, any>) => void
+  setdDtaInfo: (info: Record<string, any>) => void
    dataInfo?: any
 }
 
