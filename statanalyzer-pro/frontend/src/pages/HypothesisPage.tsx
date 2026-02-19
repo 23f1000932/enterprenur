@@ -19,7 +19,7 @@ const HypothesisPage: React.FC<HypothesisPageProps> = ({ dataId, dataInfo }) => 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!dataId || !column) return
-      return await runHypothesisTest(dataId, { column, mu0: parseFloat(String(mu0)), alpha: parseFloat(String(alpha)) })
+      return await runHypothesisTest({ dataId, column, mu0: parseFloat(String(mu0)), alpha: parseFloat(String(alpha)) })
     },
   })
 
