@@ -16,6 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ children, dataInfo }) => {
 
   const navItems = [
     { path: '/', icon: Upload, label: 'Import Assets', section: 'BUSINESS' },
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Business Dashboard', section: 'BUSINESS' },
     { path: '/clean', icon: Droplet, label: 'Data Refinery', section: 'BUSINESS' },
     { path: '/statistics', icon: LayoutDashboard, label: 'Business Insights', section: 'ANALYSIS' },
     { path: '/correlation', icon: Network, label: 'Market Correlation', section: 'ANALYSIS' },
