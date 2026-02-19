@@ -6,13 +6,13 @@ import { runHypothesisTest } from '../api/client'
 
 interface HypothesisPageProps {
   dataId: string | null
-  dataInfo: any
+  dataInfo: Record<string, any>
 }
 
 const HypothesisPage: React.FC<HypothesisPageProps> = ({ dataId, dataInfo }) => {
-  const [column, setColumn] = useState('')
-  const [mu0, setMu0] = useState(0)
-  const [alpha, setAlpha] = useState(0.05)
+  const [column, setColumn] = useState<string>('')
+  const [mu0, setMu0] = useState<number>(0)
+  const [alpha, setAlpha] = useState<number>(0.05)
 
   const columns = dataInfo?.columns || []
 
@@ -125,37 +125,36 @@ const HypothesisPage: React.FC<HypothesisPageProps> = ({ dataId, dataInfo }) => 
                   <CheckCircle className="w-5 h-5 text-green-400" />
                   Test Results Summary
                 </h3>
-
                 <div className="grid grid-cols-2 gap-4">
                   {/* Test Statistic */}
                   <div className="bg-slate-700/30 rounded-xl p-4">
                     <p className="text-sm text-gray-400 mb-1">Test Statistic (t)</p>
-                    <p className="text-2xl font-bold text-white">{mutation.data.t_statistic?.toFixed(4)}</p>
+                    <p className="text-2xl font-bold text-white">{(mutation.data as any).t_statistic?.toFixed(4)}</p>
                   </div>
 
                   {/* P-value */}
                   <div className="bg-slate-700/30 rounded-xl p-4">
                     <p className="text-sm text-gray-400 mb-1">P-value</p>
-                    <p className="text-2xl font-bold text-white">{mutation.data.p_value?.toFixed(6)}</p>
+                    <p className="text-2xl font-bold text-white">{(mutation.data as any).p_value?.toFixed(6)}</p>
                   </div>
 
                   {/* Degrees of Freedom */}
                   <div className="bg-slate-700/30 rounded-xl p-4">
                     <p className="text-sm text-gray-400 mb-1">Degrees of Freedom</p>
-                    <p className="text-2xl font-bold text-white">{mutation.data.df}</p>
+                    <p className="text-2xl font-bold text-white">{(mutation.data as any).df}</p>
                   </div>
 
                   {/* Conclusion */}
                   <div className={`rounded-xl p-4 ${
-                    mutation.data.reject_null
+                    (mutation.data as any).reject_null
                       ? 'bg-red-500/10 border border-red-500/30'
                       : 'bg-green-500/10 border border-green-500/30'
                   }`}>
                     <p className="text-sm text-gray-400 mb-1">Conclusion</p>
                     <p className={`text-sm font-bold ${
-                      mutation.data.reject_null ? 'text-red-400' : 'text-green-400'
+                      (mutation.data as any).reject_null ? 'text-red-400' : 'text-green-400'
                     }`}>
-                      {mutation.data.reject_null ? 'Reject H₀' : 'Fail to Reject H₀'}
+                      {(mutation.data as any).reject_null ? 'Reject H₀' : 'Fail to Reject H₀'}
                     </p>
                   </div>
                 </div>
@@ -165,9 +164,9 @@ const HypothesisPage: React.FC<HypothesisPageProps> = ({ dataId, dataInfo }) => 
               <div className="bg-gradient-to-br from-slate-800/40 to-slate-700/20 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6">
                 <h3 className="text-lg font-bold text-white mb-4">Interpretation</h3>
                 <p className="text-gray-300 leading-relaxed">
-                  {mutation.data.reject_null
-                    ? `With a p-value of ${mutation.data.p_value?.toFixed(6)}, which is less than the significance level of ${alpha}, we have strong evidence to reject the null hypothesis. The mean is significantly different from ${mu0}.`
-                    : `With a p-value of ${mutation.data.p_value?.toFixed(6)}, which is greater than the significance level of ${alpha}, we do not have sufficient evidence to reject the null hypothesis.`}
+                  {(mutation.data as any).reject_null
+                    ? `With a p-value of ${(mutation.data as any).p_value?.toFixed(6)}, which is less than the significance level of ${alpha}, we have strong evidence to reject the null hypothesis. The mean is significantly different from ${mu0}.`
+                    : `With a p-value of ${(mutation.data as any).p_value?.toFixed(6)}, which is greater than the significance level of ${alpha}, we do not have sufficient evidence to reject the null hypothesis.`}
                 </p>
               </div>
             </>
