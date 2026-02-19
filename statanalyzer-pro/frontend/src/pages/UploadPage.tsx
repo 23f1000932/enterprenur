@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, CheckCircle, AlertCircle, FileText, BarChart3, TestTube, TrendingUp } from 'lucide-react'
+import { Upload, CheckCircle, AlertCircle, FileText, Rocket, Target, Zap } from 'lucide-react'
 import { uploadData } from '../api/client'
 
 interface UploadPageProps {
@@ -29,7 +29,6 @@ const UploadPage: React.FC<UploadPageProps> = ({ setDataId, setDataInfo }) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0])
       setError(null)
@@ -45,39 +44,41 @@ const UploadPage: React.FC<UploadPageProps> = ({ setDataId, setDataInfo }) => {
 
   const handleUpload = async () => {
     if (!file) return
-
     setUploading(true)
     setError(null)
-
     try {
       const data = await uploadData(file)
       setDataId(data.data_id)
       setDataInfo(data)
       navigate('/statistics')
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Upload failed. Please try again.')
+      setError(err.response?.data?.detail || 'System error. Asset onboarding failed.')
     } finally {
       setUploading(false)
     }
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Professional Statistical Analysis Platform
+    <div className="max-w-5xl mx-auto space-y-12">
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center space-x-2 bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
+          <Zap className="w-4 h-4 text-indigo-600" />
+          <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Next-Gen Data Engine</span>
+        </div>
+        <h1 className="text-5xl font-black text-slate-900 tracking-tight">
+          Unlock Your Business <span className="text-indigo-600">DNA.</span>
         </h1>
-        <p className="text-gray-600">
-          Upload your data to begin comprehensive statistical analysis for business intelligence and healthcare research.
+        <p className="text-lg text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed">
+          Upload your enterprise assets to transform raw data into strategic growth opportunities.
         </p>
       </div>
 
-      <div className="card mb-8">
+      <div className="bg-white rounded-3xl p-2 shadow-2xl shadow-indigo-100 border border-slate-100">
         <div
-          className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+          className={`relative border-4 border-dashed rounded-[2rem] p-16 text-center transition-all duration-500 group ${
             dragActive
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-gray-300 hover:border-gray-400'
+              ? 'border-indigo-500 bg-indigo-50/50'
+              : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50/50'
           }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -88,76 +89,81 @@ const UploadPage: React.FC<UploadPageProps> = ({ setDataId, setDataInfo }) => {
             type="file"
             accept=".csv,.xlsx,.xls"
             onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             disabled={uploading}
           />
           
-          <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Upload Your Dataset
+          <div className="relative">
+            <div className="absolute inset-0 bg-indigo-400 blur-3xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+            <Upload className={`w-20 h-20 mx-auto mb-6 transition-all duration-500 ${dragActive ? 'text-indigo-600 scale-110' : 'text-slate-300 group-hover:text-indigo-400'}`} />
+          </div>
+          
+          <h3 className="text-2xl font-black text-slate-900 mb-3">
+            Drop Your Asset Here
           </h3>
-          <p className="text-gray-600 mb-4">
-            Drag and drop your file here, or click to browse
-          </p>
-          <p className="text-sm text-gray-500">
-            Supported formats: CSV, Excel (.xlsx, .xls)
+          <p className="text-slate-500 mb-8 font-bold text-sm tracking-wide uppercase">
+            CSV, EXCEL (XLSX, XLS) SUPPORTED
           </p>
 
           {file && (
-            <div className="mt-6 inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-              <FileText className="w-5 h-5 text-green-600 mr-2" />
-              <span className="text-sm font-medium text-green-700">{file.name}</span>
+            <div className="mt-8 flex justify-center animate-in zoom-in duration-300">
+              <div className="inline-flex items-center px-6 py-3 bg-slate-900 text-white rounded-2xl shadow-xl">
+                <FileText className="w-5 h-5 text-indigo-400 mr-3" />
+                <span className="text-sm font-black truncate max-w-[200px]">{file.name}</span>
+              </div>
             </div>
           )}
         </div>
-
-        {error && (
-          <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded">
-            <div className="flex items-start">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {file && !error && (
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={handleUpload}
-              disabled={uploading}
-              className="btn-primary flex items-center space-x-2"
-            >
-              {uploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                  <span>Uploading...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Upload and Analyze</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {error && (
+        <div className="p-6 bg-red-50 border border-red-100 rounded-3xl flex items-center space-x-4 animate-in slide-in-from-top">
+          <div className="bg-red-500 p-2 rounded-xl">
+            <AlertCircle className="w-6 h-6 text-white" />
+          </div>
+          <p className="text-sm font-black text-red-700 uppercase tracking-wider">{error}</p>
+        </div>
+      )}
+
+      <div className="flex justify-center">
+        <button
+          onClick={handleUpload}
+          disabled={!file || uploading}
+          className={`px-10 py-5 rounded-[1.5rem] font-black text-sm tracking-[0.1em] uppercase transition-all duration-500 flex items-center space-x-3 ${
+            !file 
+              ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+              : 'bg-indigo-600 text-white shadow-2xl shadow-indigo-200 hover:bg-slate-900 hover:-translate-y-1'
+          }`}
+        >
+          {uploading ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-4 border-white/20 border-t-white" />
+              <span>Analyzing Market...</span>
+            </>
+          ) : (
+            <>
+              <Rocket className="w-5 h-5" />
+              <span>Execute Intelligence</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-8 pt-8">
         <FeatureCard
-          icon={<BarChart3 className="w-8 h-8 text-primary-600" />}
-          title="Descriptive Analytics"
-          description="Comprehensive statistical summaries including mean, median, variance, skewness, and kurtosis analysis."
+          icon={<Zap className="w-6 h-6" />}
+          title="Instant KPIs"
+          description="Real-time performance metrics derived from your operational datasets."
         />
         <FeatureCard
-          icon={<TestTube className="w-8 h-8 text-primary-600" />}
-          title="Hypothesis Testing"
-          description="Conduct t-tests, ANOVA, and chi-square tests with confidence interval calculations."
+          icon={<Target className="w-6 h-6" />}
+          title="Market Fit"
+          description="Validate strategic hypotheses with precision statistical auditing."
         />
         <FeatureCard
-          icon={<TrendingUp className="w-8 h-8 text-primary-600" />}
-          title="Regression Modeling"
-          description="Linear and multiple regression analysis with R-squared, F-statistics, and residual diagnostics."
+          icon={<Rocket className="w-6 h-6" />}
+          title="Growth Velocity"
+          description="Predictive modeling to forecast your enterprise expansion path."
         />
       </div>
     </div>
@@ -169,10 +175,12 @@ const FeatureCard: React.FC<{
   title: string
   description: string
 }> = ({ icon, title, description }) => (
-  <div className="card hover:shadow-md transition-shadow">
-    <div className="mb-4">{icon}</div>
-    <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-    <p className="text-sm text-gray-600">{description}</p>
+  <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-500 group">
+    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
+      {icon}
+    </div>
+    <h3 className="text-lg font-black text-slate-900 mb-3">{title}</h3>
+    <p className="text-slate-500 text-sm font-medium leading-relaxed">{description}</p>
   </div>
 )
 
