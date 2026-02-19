@@ -235,6 +235,138 @@ async def hypothesis_test(request: HypothesisTestRequest):
         "interpretation": f"At α={request.alpha}, we {decision.replace('_', ' ')} H₀"
     }
 
+
+# ============= REGRESSION ANALYSIS =============
+@app.post("/api/regression")
+async def run_regression(request: RegressionRequest):
+    if request.data_id not in data_store:
+        raise HTTPException(status_code=404, detail="Data not found")
+    
+    df = data_store[request.data_id]
+    
+    if request.x_column not in df.columns or request.y_column not in df.columns:
+        raise HTTPException(status_code=400, detail="Column not found")
+    
+    # Remove NaN values
+    data = df[[request.x_column, request.y_column]].dropna()
+    
+    X = data[request.x_column].values
+    y = data[request.y_column].values
+    
+    # Add constant for intercept
+    X = sm.add_constant(X)
+    
+    # Fit OLS regression
+    model = sm.OLS(y, X).fit()
+    
+    return {
+        "r_squared": float(model.rsquared),
+        "adj_r_squared": float(model.rsquared_adj),
+        "f_statistic": float(model.fvalue),
+        "p_value": float(model.f_pvalue),
+        "coefficients": {
+            "intercept": float(model.params[0]),
+            "slope": float(model.params[1])
+        },
+        "std_errors": {
+            "intercept": float(model.bse[0]),
+            "slope": float(model.bse[1])
+        }
+    }
+
+# ============= ANOVA ANALYSIS =============
+@app.post("/api/anova")
+async def run_anova(request: ANOVARequest):
+    if request.data_id not in data_store:
+        raise HTTPException(status_code=404, detail="Data not found")
+    
+    df = data_store[request.data_id]
+    
+    if request.value_column not in df.columns or request.group_column not in df.columns:
+        raise HTTPException(status_code=400, detail="Column not found")
+    
+    # Remove NaN values
+    data = df[[request.value_column, request.group_column]].dropna()
+    
+    # Group data by group_column
+    groups = [group_data[request.value_column].values for name, group_data in data.groupby(request.group_column)]
+    
+    # Perform one-way ANOVA
+    f_stat, p_value = stats.f_oneway(*groups)
+    
+    # Calculate means for each group
+    group_means = {}
+    for name, group_data in data.groupby(request.group_column):
+        group_means[str(name)] = float(group_data[request.value_column].mean())
+    
+    return {
+        "f_statistic": float(f_stat),
+        "p_value": float(p_value),
+        "group_means": group_means,
+        "num_groups": len(groups),
+        "interpretation": "Significant difference between groups" if p_value < 0.05 else "No significant difference between groups"
+    }
+
+# ============= CORRELATION ANALYSIS =============
+@app.get("/api/correlation/{data_id}")
+async def get_correlation(data_id: str):
+    if data_id not in data_store:
+        raise HTTPException(status_code=404, detail="Data not found")
+    
+    df = data_store[data_id]
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    
+    if len(numeric_cols) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 numeric columns")
+    
+    # Calculate correlation matrix
+    corr_matrix = df[numeric_cols].corr()
+    
+    # Convert to list format for visualization
+    correlation_data = []
+    for i, col1 in enumerate(numeric_cols):
+        for j, col2 in enumerate(numeric_cols):
+            if i < j:  # Only upper triangle to avoid duplicates
+                correlation_data.append({
+                    "col1": col1,
+                    "col2": col2,
+                    "correlation": float(corr_matrix.loc[col1, col2])
+                })
+    
+    return {
+        "correlation_matrix": corr_matrix.to_dict(),
+        "correlation_pairs": correlation_data
+    }
+
+# ============= NORMALITY TEST =============
+@app.post("/api/normality-test")
+async def normality_test(request: NormalityTestRequest):
+    if request.data_id not in data_store:
+        raise HTTPException(status_code=404, detail="Data not found")
+    
+    df = data_store[request.data_id]
+    values = df[request.column].dropna()
+    
+    if len(values) < 3:
+        raise HTTPException(status_code=400, detail="Need at least 3 data points")
+    
+    # Shapiro-Wilk test
+    stat, p_value = stats.shapiro(values)
+    
+    # Additional: Skewness and Kurtosis
+    skewness = stats.skew(values)
+    kurtosis = stats.kurtosis(values)
+    
+    return {
+        "test_name": "Shapiro-Wilk Test",
+        "statistic": float(stat),
+        "p_value": float(p_value),
+        "is_normal": bool(p_value > request.alpha),
+        "skewness": float(skewness),
+        "kurtosis": float(kurtosis),
+        "interpretation": f"The data is {'normally' if p_value > request.alpha else 'not normally'} distributed (p={p_value:.4f})"
+    }
+
 # ============= STATIC FILE SERVING =============
 static_path = os.path.join(os.getcwd(), "static")
 if os.path.exists(static_path):
