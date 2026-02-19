@@ -6,11 +6,11 @@ import { api } from '../api/client'
 interface DataCleaningPageProps {
   dataId: string | null
   setDataId: (id: string) => void
-  setDataInfo: (info: Record<string, any>) => void
+  setdataInfo: (info: Record<string, any>) => void
    dataInfo?: any
 }
 
-const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, setDataIn, dataInfofo }) => {
+const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, setDataInfo, dataInfo }) => {
   const [selectedStrategy, setSelectedStrategy] = useState<string>('fill_mean')
   const [selectedOutlier, setSelectedOutlier] = useState<string>('iqr')
   const [selectedScaling, setSelectedScaling] = useState<string>('standardize')
@@ -62,7 +62,7 @@ const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, 
     },
     onSuccess: (data: any) => {
       setDataId(data.id)
-      setDataInfo(data.info)
+      setdataInfo(data.info)
     },
   })
 
