@@ -9,6 +9,7 @@ import RegressionPage from './pages/RegressionPage'
 import ANOVAPage from './pages/ANOVAPage'
 import CorrelationPage from './pages/CorrelationPage'
 import NormalityPage from './pages/NormalityPage'
+import BusinessDashboard from './pages/BusinessDashboard'
 
 function App() {
   const [dataId, setDataId] = useState<string | null>(null)
@@ -46,6 +47,10 @@ function App() {
             path="/correlation" 
             element={<CorrelationPage dataId={dataId} />} 
           />
+                  <Route
+          path="/dashboard"
+          element={<BusinessDashboard />}
+        />
           <Route 
             path="/normality" 
             element={<NormalityPage dataId={dataId} dataInfo={dataInfo} />} 
