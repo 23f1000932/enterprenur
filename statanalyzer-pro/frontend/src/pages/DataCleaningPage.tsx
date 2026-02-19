@@ -1,263 +1,216 @@
 import React, { useState } from 'react'
-import { AlertCircle, Loader2, CheckCircle, Download } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { AlertCircle, CheckCircle, Zap, Settings, Eye, EyeOff, Download, RefreshCw, Sparkles } from 'lucide-react'
 import { api } from '../api/client'
 
 interface DataCleaningPageProps {
   dataId: string | null
-  dataInfo: any
   setDataId: (id: string) => void
   setDataInfo: (info: any) => void
 }
 
-const cleaningStrategies = [
-  { value: 'fill_mean', label: 'Mean Imputation' },
-  { value: 'fill_median', label: 'Median Imputation' },
-  { value: 'fill_mode', label: 'Mode Imputation' },
-  { value: 'drop_missing', label: 'Drop Missing Rows' }
-]
+const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, setDataInfo }) => {
+  const [selectedStrategy, setSelectedStrategy] = useState('fill_mean')
+  const [selectedOutlier, setSelectedOutlier] = useState('iqr')
+  const [selectedScaling, setSelectedScaling] = useState('standardize')
+  const [previewVisible, setPreviewVisible] = useState(false)
 
-const outlierStrategies = [
-  { value: 'iqr', label: 'IQR Method' },
-  { value: 'zscore', label: 'Z-score Method' }
-]
+  const cleaningStrategies = [
+    { value: 'fill_mean', label: 'Mean Imputation', description: 'Fill missing values with mean', icon: '📊' },
+    { value: 'fill_median', label: 'Median Imputation', description: 'Fill with median values', icon: '📈' },
+    { value: 'fill_mode', label: 'Mode Imputation', description: 'Fill with most frequent value', icon: '🎯' },
+    { value: 'drop_missing', label: 'Drop Missing', description: 'Remove rows with missing data', icon: '🗑️' },
+  ]
 
-const scalingStrategies = [
-  { value: 'standard', label: 'StandardScaler (Z-score)' },
-  { value: 'minmax', label: 'MinMaxScaler (0-1)' }
-]
+  const outlierStrategies = [
+    { value: 'iqr', label: 'IQR Method', description: 'Interquartile Range detection', icon: '📍' },
+    { value: 'zscore', label: 'Z-score Method', description: 'Statistical z-score approach', icon: '📐' },
+  ]
 
-const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, dataInfo, setDataId }) => {
-  const [preview, setPreview] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [missingMethod, setMissingMethod] = useState('fill_mean')
-  const [outlierMethod, setOutlierMethod] = useState('iqr')
-  const [scaler, setScaler] = useState('standard')
+  const scalingStrategies = [
+    { value: 'standardize', label: 'Standardization', description: 'Zero mean, unit variance', icon: '⚙️' },
+    { value: 'normalize', label: 'Normalization', description: '0-1 range scaling', icon: '📏' },
+    { value: 'log', label: 'Log Transform', description: 'Log-scale transformation', icon: '📉' },
+  ]
 
-  // Load preview & stats
-  React.useEffect(() => {
-    if (!dataId) {
-      setPreview(null)
-      return
-    }
-    setLoading(true)
-    setMessage(null)
-    setError(null)
-    api.get(`/api/data-preview/${dataId}`)
-      .then(res => setPreview(res.data))
-      .catch(() => setError('Failed to load preview'))
-      .finally(() => setLoading(false))
-  }, [dataId])
-
-  const handleImpute = async () => {
-    setLoading(true); setMessage(null); setError(null)
-    try {
-      const res = await api.post('/api/clean-missing', { data_id: dataId, operation: missingMethod })
-      setMessage(res.data.message)
-      setDataId(res.data.new_data_id)
-    } catch {
-      setError('Impute failed')
-    } finally { setLoading(false)}
-  }
-
-  const handleOutliers = async () => {
-    setLoading(true); setMessage(null); setError(null)
-    const numericColumns = preview?.columns || []
-    try {
-      const res = await api.post('/api/remove-outliers', {
+  const { data: previewData } = useQuery({
+    queryKey: ['cleaning_preview', dataId, selectedStrategy, selectedOutlier, selectedScaling],
+    queryFn: async () => {
+      if (!dataId) return null
+      const response = await api.post('/clean-preview', {
         data_id: dataId,
-        method: outlierMethod,
-        columns: numericColumns
+        strategy: selectedStrategy,
+        outlier_method: selectedOutlier,
+        scaling: selectedScaling,
       })
-      setMessage(res.data.message)
-      setDataId(res.data.new_data_id)
-    } catch {
-      setError('Remove outliers failed')
-    } finally { setLoading(false) }
-  }
+      return response.data
+    },
+    enabled: !!dataId && previewVisible,
+  })
 
-  const handleScale = async () => {
-    setLoading(true); setMessage(null); setError(null)
-    const numericColumns = preview?.columns || []
-    try {
-      const res = await api.post('/api/scale-data', {
+  const cleanMutation = useMutation({
+    mutationFn: async () => {
+      if (!dataId) return
+      const response = await api.post('/clean-data', {
         data_id: dataId,
-        method: scaler,
-        columns: numericColumns
+        strategy: selectedStrategy,
+        outlier_method: selectedOutlier,
+        scaling: selectedScaling,
       })
-      setMessage(res.data.message)
-      setDataId(res.data.new_data_id)
-    } catch {
-      setError('Scaling failed')
-    } finally { setLoading(false) }
-  }
-
-  const handleDownload = () => {
-    if (!preview) return
-    const rows: string[] = []
-    rows.push(preview.columns.join(','))
-    preview.preview.forEach((row: any) => {
-      rows.push(preview.columns.map((h: string) => row[h]).join(','))
-    })
-    const csvString = rows.join('\n')
-    const blob = new Blob([csvString], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'cleaned_data.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+      return response.data
+    },
+    onSuccess: (data) => {
+      setDataId(data.id)
+      setDataInfo(data.info)
+    },
+  })
 
   if (!dataId) {
     return (
-      <div className="card border-l-4 border-yellow-500 bg-yellow-50 my-10">
-        <div className="flex items-start">
-          <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-yellow-800">No Data Loaded</h3>
-            <p className="text-sm text-yellow-700">
-              Please upload a dataset first.
-            </p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/50">
+            <Sparkles className="w-10 h-10 text-white" />
           </div>
+          <h2 className="text-3xl font-bold text-white mb-4">Data Cleaning</h2>
+          <p className="text-gray-400 text-lg">Upload a dataset first to begin the cleaning process</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div>
-      <h1 className="font-bold text-2xl mb-2 text-gray-800">🧹 Data Cleaning Dashboard</h1>
-      <div className="mb-6 text-gray-600">Enterprise-grade pre-processing—safe, tested, upgradeable!</div>
-
-      {/* Status */}
-      {loading && (
-        <div className="flex gap-2 items-center text-blue-700 mb-4">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          Processing...
-        </div>
-      )}
-      {!loading && message && (
-        <div className="flex gap-2 items-center text-green-700 mb-4">
-          <CheckCircle className="w-5 h-5" />
-          {message}
-        </div>
-      )}
-      {!loading && error && (
-        <div className="flex gap-2 items-center text-red-700 mb-4">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-        </div>
-      )}
-
-      {/* Stats + Download */}
-      {preview && (
-        <div className="grid md:grid-cols-4 gap-3 mb-6">
-          <div className="bg-blue-50 card">
-            <div className="font-bold text-gray-700">Rows</div>
-            <div className="font-mono">{preview.shape[0]}</div>
-          </div>
-          <div className="bg-purple-50 card">
-            <div className="font-bold text-gray-700">Columns</div>
-            <div className="font-mono">{preview.shape[1]}</div>
-          </div>
-          <div className="bg-orange-50 card">
-            <div className="font-bold text-gray-700">Missing</div>
-            <div className="font-mono">
-              {(Object.values(preview.missing_values || {}) as number[]).reduce((a, b) => a + b, 0)}
-            </div>
-          </div>
-          <div className="bg-green-50 card flex items-center justify-center">
-            <button className="btn-secondary flex items-center gap-2" onClick={handleDownload}>
-              <Download className="w-5 h-5" /> Download Cleaned CSV
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Cleaning Controls */}
-      <div className="grid md:grid-cols-3 gap-6 mb-10">
-        <div className="card">
-          <div className="font-semibold mb-2">Impute Missing Values</div>
-          <select
-            className="input mb-2"
-            value={missingMethod}
-            onChange={e => setMissingMethod(e.target.value)}
-          >
-            {cleaningStrategies.map(s => (
-              <option value={s.value} key={s.value}>{s.label}</option>
-            ))}
-          </select>
-          <button className="btn-primary w-full" onClick={handleImpute} disabled={loading}>
-            Impute
-          </button>
-        </div>
-
-        <div className="card">
-          <div className="font-semibold mb-2">Remove Outliers</div>
-          <select
-            className="input mb-2"
-            value={outlierMethod}
-            onChange={e => setOutlierMethod(e.target.value)}
-          >
-            {outlierStrategies.map(s => (
-              <option value={s.value} key={s.value}>{s.label}</option>
-            ))}
-          </select>
-          <button className="btn-primary w-full" onClick={handleOutliers} disabled={loading}>
-            Remove Outliers
-          </button>
-        </div>
-
-        <div className="card">
-          <div className="font-semibold mb-2">Scale Data</div>
-          <select
-            className="input mb-2"
-            value={scaler}
-            onChange={e => setScaler(e.target.value)}
-          >
-            {scalingStrategies.map(s => (
-              <option value={s.value} key={s.value}>{s.label}</option>
-            ))}
-          </select>
-          <button className="btn-primary w-full" onClick={handleScale} disabled={loading}>
-            Scale Data
-          </button>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent mb-2">
+          Advanced Data Cleaning
+        </h1>
+        <p className="text-gray-400 text-lg">Configure strategies for data preprocessing</p>
       </div>
 
-      {/* Data Preview Table */}
-      {preview && (
-        <div className="card">
-          <h2 className="font-bold text-lg mb-2">Preview (First 10 Rows)</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr>
-                  {preview.columns.map((col: string) => (
-                    <th key={col} className="px-2 py-1 text-xs font-bold text-gray-600">{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.preview.map((row: any, idx: number) => (
-                  <tr key={idx}>
-                    {preview.columns.map((col: string) => (
-                      <td key={col} className="px-2 py-1 text-xs">
-                        {row[col] !== null && row[col] !== undefined
-                          ? (typeof row[col] === 'number' ? row[col].toFixed(2) : row[col])
-                          : <span className="text-gray-400">null</span>
-                        }
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Strategy Cards */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Missing Values Strategy */}
+          <div className="bg-gradient-to-br from-slate-800/40 to-slate-700/20 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+              <div className="w-1 h-6 bg-gradient-to-b from-blue-400 to-cyan-500 rounded"></div>
+              Missing Values Handling
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {cleaningStrategies.map((strategy) => (
+                <button
+                  key={strategy.value}
+                  onClick={() => setSelectedStrategy(strategy.value)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    selectedStrategy === strategy.value
+                      ? 'bg-blue-500/20 border-blue-500 shadow-lg shadow-blue-500/30'
+                      : 'bg-slate-700/20 border-slate-600/50 hover:border-blue-500/50'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{strategy.icon}</div>
+                  <p className="font-semibold text-white text-sm">{strategy.label}</p>
+                  <p className="text-xs text-gray-400 mt-1">{strategy.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Outlier Detection */}
+          <div className="bg-gradient-to-br from-slate-800/40 to-slate-700/20 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/50 transition-all duration-300">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+              <div className="w-1 h-6 bg-gradient-to-b from-purple-400 to-pink-500 rounded"></div>
+              Outlier Detection
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {outlierStrategies.map((strategy) => (
+                <button
+                  key={strategy.value}
+                  onClick={() => setSelectedOutlier(strategy.value)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    selectedOutlier === strategy.value
+                      ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/30'
+                      : 'bg-slate-700/20 border-slate-600/50 hover:border-purple-500/50'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{strategy.icon}</div>
+                  <p className="font-semibold text-white text-sm">{strategy.label}</p>
+                  <p className="text-xs text-gray-400 mt-1">{strategy.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scaling */}
+          <div className="bg-gradient-to-br from-slate-800/40 to-slate-700/20 backdrop-blur-xl border border-green-500/20 rounded-2xl p-6 hover:border-green-500/50 transition-all duration-300">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+              <div className="w-1 h-6 bg-gradient-to-b from-green-400 to-emerald-500 rounded"></div>
+              Data Scaling
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {scalingStrategies.map((strategy) => (
+                <button
+                  key={strategy.value}
+                  onClick={() => setSelectedScaling(strategy.value)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    selectedScaling === strategy.value
+                      ? 'bg-green-500/20 border-green-500 shadow-lg shadow-green-500/30'
+                      : 'bg-slate-700/20 border-slate-600/50 hover:border-green-500/50'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{strategy.icon}</div>
+                  <p className="font-semibold text-white text-sm">{strategy.label}</p>
+                  <p className="text-xs text-gray-400 mt-1">{strategy.description}</p>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Sidebar Actions */}
+        <div className="space-y-4">
+          {/* Preview Button */}
+          <button
+            onClick={() => setPreviewVisible(!previewVisible)}
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-700/50 to-slate-600/50 hover:from-slate-700 hover:to-slate-600 text-white font-semibold rounded-xl border border-slate-600/50 transition-all duration-200"
+          >
+            {previewVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            {previewVisible ? 'Hide Preview' : 'Show Preview'}
+          </button>
+
+          {/* Preview Box */}
+          {previewVisible && previewData && (
+            <div className="bg-gradient-to-br from-slate-800/60 to-slate-700/30 backdrop-blur-xl border border-slate-600/50 rounded-xl p-4 max-h-48 overflow-auto">
+              <p className="text-xs text-gray-400 font-mono">{JSON.stringify(previewData, null, 2).slice(0, 200)}...</p>
+            </div>
+          )}
+
+          {/* Apply Cleaning Button */}
+          <button
+            onClick={() => cleanMutation.mutate()}
+            disabled={cleanMutation.isPending}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-600 disabled:to-slate-600 text-white font-bold rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/50 hover:shadow-xl"
+          >
+            {cleanMutation.isPending ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : (
+              <Zap className="w-5 h-5" />
+            )}
+            {cleanMutation.isPending ? 'Processing...' : 'Apply Cleaning'}
+          </button>
+
+          {/* Success Message */}
+          {cleanMutation.isSuccess && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+              <p className="text-green-400 text-sm font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Data cleaned successfully!
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
