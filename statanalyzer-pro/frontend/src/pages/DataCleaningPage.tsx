@@ -6,14 +6,14 @@ import { api } from '../api/client'
 interface DataCleaningPageProps {
   dataId: string | null
   setDataId: (id: string) => void
-  setDataInfo: (info: any) => void
+  setDataInfo: (info: Record<string, any>) => void
 }
 
 const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, setDataInfo }) => {
-  const [selectedStrategy, setSelectedStrategy] = useState('fill_mean')
-  const [selectedOutlier, setSelectedOutlier] = useState('iqr')
-  const [selectedScaling, setSelectedScaling] = useState('standardize')
-  const [previewVisible, setPreviewVisible] = useState(false)
+  const [selectedStrategy, setSelectedStrategy] = useState<string>('fill_mean')
+  const [selectedOutlier, setSelectedOutlier] = useState<string>('iqr')
+  const [selectedScaling, setSelectedScaling] = useState<string>('standardize')
+  const [previewVisible, setPreviewVisible] = useState<boolean>(false)
 
   const cleaningStrategies = [
     { value: 'fill_mean', label: 'Mean Imputation', description: 'Fill missing values with mean', icon: '📊' },
@@ -59,7 +59,7 @@ const DataCleaningPage: React.FC<DataCleaningPageProps> = ({ dataId, setDataId, 
       })
       return response.data
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setDataId(data.id)
       setDataInfo(data.info)
     },
